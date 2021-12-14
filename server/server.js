@@ -3,11 +3,14 @@ const
   socket = require('socket.io'),
   path = require('path')
 
-const 
-  app = express(),
-  tasks = [`Drink coffee`, `Eat pieguski`]
+const app = express()
+let tasks = []
 
 app.use(express.static(path.join(__dirname, '../client')))
+
+function updateData(newData) {
+  tasks = newData
+}
 
 const server = app.listen(8000, () => {
   console.log('server is listening on port 8000')
@@ -15,18 +18,17 @@ const server = app.listen(8000, () => {
 
 const io = socket(server)
 
-io.on('connect', (socket) => {
-  console.log(`connection from ${socket.id}, sending tasks to init on client side`)
+io.on('connection', (socket) => {
+  console.log(`connection from ${socket.id}, sending tasks to init on client side \n`)
   socket.emit('updateData', tasks)
 
   socket.on('addTask', (task) => {
     tasks.push(task)
-    socket.broadcast.emit('updateData', tasks)
+    socket.broadcast.emit('addTask', task)
   })
   
-  socket.on('removeTask', (taskIndex) => {
-    tasks.splice(taskIndex, 1)
-    console.log(tasks)
-    socket.broadcast.emit('updateData', tasks)
+  socket.on('removeTask', (taskId) => {
+    updateData(tasks.filter(item => item.id !== taskId))
+    socket.broadcast.emit('removeTask', taskId)
   })
 })

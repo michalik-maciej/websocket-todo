@@ -3,25 +3,33 @@ import { useEffect, useState } from 'react'
 import io from 'socket.io-client'
 import shortId from 'shortid'
 
-//const socket = io('http://localhost:8000')
+const socket = io('http://localhost:8000')
 
 const App = function () {
   const [tasks, setTasks] = useState([])
-  //socket.on('updateData', (data) => setTasks(data))
 
-  function addTask({ event, newTask }) {
+  socket.on('updateData', (allTasks) => setTasks(allTasks))
+  socket.on('addTask', (newTask) => setTasks([...tasks, newTask]))
+  socket.on('removeTask', (taskId) => removeTask(taskId))
+
+  function addTask({ event, taskName }) {
     event.preventDefault()
-    if (newTask !== '') {
-      setTasks([...tasks, { id: shortId(), name: newTask }])
+    if (taskName !== '') {
+      const newTask = { id: shortId(), name: taskName }
+      setTasks([...tasks, newTask])
       document.getElementById('task-name').value = ''
-      //socket.emit('addTask', newTask)
+      socket.emit('addTask', newTask)
     }
+  }
+
+  function removeOwnTask(taskId) {
+    removeTask(taskId)
+    socket.emit('removeTask', taskId)
   }
 
   function removeTask(taskId) {
     const filteredTasks = tasks.filter((item) => item.id !== taskId)
     setTasks(filteredTasks)
-    //socket.emit('removeTask', tasks.indexOf(task))
   }
 
   return (
@@ -37,7 +45,7 @@ const App = function () {
                 {task.name}
                 <button
                   class="btn btn--red"
-                  onClick={() => removeTask(task.id)}
+                  onClick={() => removeOwnTask(task.id)}
                 >
                   Remove
                 </button>
@@ -59,7 +67,7 @@ const App = function () {
               onClick={(event) =>
                 addTask({
                   event,
-                  newTask: document.getElementById('task-name').value,
+                  taskName: document.getElementById('task-name').value,
                 })
               }
             >
